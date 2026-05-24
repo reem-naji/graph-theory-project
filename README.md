@@ -23,42 +23,49 @@ The final schedule and the course-conflict graph are both exported: the schedule
 ## How It Works
 
 ### 1. Data Loading & Cleaning
+
 Enrollment data for five faculties is loaded from separate sheets of an Excel file and merged into a single DataFrame after handling nulls, duplicates, and type inconsistencies:
 
-| Faculty | Sheet |
-|---|---|
-| Medical Sciences | علوم طبية |
-| Pharmacy & Dentistry | صيدلة وطب اسنان |
+| Faculty                 | Sheet           |
+| ----------------------- | --------------- |
+| Medical Sciences        | علوم طبية       |
+| Pharmacy & Dentistry    | صيدلة وطب اسنان |
 | Business Administration | العلوم الادارية |
-| Engineering | الهندسة |
-| Computer Science | حاسب الي |
+| Engineering             | الهندسة         |
+| Computer Science        | حاسب الي        |
 
 ### 2. Graph Construction
+
 ```
 For every student:
     For every pair of courses they are enrolled in:
         Add an edge between those two course nodes
         (or increment its weight if it already exists)
 ```
+
 Node size in the visualisation = number of enrolled students.  
 Node colour = degree (number of courses it conflicts with).
 
 ### 3. Graph Coloring → Exam Slots
+
 Two greedy coloring strategies from NetworkX are compared:
 
-| Strategy | Speed | Colors Used | Notes |
-|---|---|---|---|
-| `largest_first` | Fast, one pass | More | Deterministic |
-| `DSATUR` | Slower | Fewer | Non-deterministic |
+| Strategy        | Speed          | Colors Used | Notes             |
+| --------------- | -------------- | ----------- | ----------------- |
+| `largest_first` | Fast, one pass | More        | Deterministic     |
+| `DSATUR`        | Slower         | Fewer       | Non-deterministic |
 
 Each color maps to a distinct exam period. Periods are then packed into days respecting two constraints:
+
 - max **5 periods per day**
 - max **2 000 student-sittings per day**
 
 ### 4. Neo4j Export
+
 The full course-conflict graph (nodes + weighted edges) is written to a local Neo4j instance so it can be explored with Cypher queries or visualised in Neo4j Bloom.
 
 ### 5. Schedule Export
+
 Both schedules (one per coloring strategy) are saved as `Exam_Schedule.xlsx` and `Exam_Schedule2.xlsx`.
 
 ---
@@ -125,40 +132,16 @@ Run all cells top to bottom. The Neo4j cells will confirm connectivity before wr
 
 ---
 
-## Bug Fix — `load_dotenv()` Was Never Called
-
-The original notebook imported `load_dotenv` but never called it, so every `os.getenv(...)` returned `None`, which `str()` silently converted to the literal string `"None"`. The driver then tried to connect with URI `"None"` and credentials `("None", "None")`, producing a misleading connection error.
-
-**Fix:** add `load_dotenv()` at the top of the cell that reads the environment variables, before the `os.getenv` calls.
-
-```python
-# ✅ Correct — call load_dotenv() before reading any env vars
-load_dotenv()
-
-uri      = os.getenv('URI')
-username = os.getenv('NEO4J_USERNAME')
-password = os.getenv('NEO4J_PASSWORD')
-
-if not all([uri, username, password]):
-    raise EnvironmentError("Missing Neo4j credentials. Check your .env file.")
-
-with GraphDatabase.driver(uri, auth=(username, password)) as driver:
-    driver.verify_connectivity()
-    print("Connection established.")
-```
-
----
-
 ## Tech Stack
 
-| Tool | Purpose |
-|---|---|
-| `pandas` | Data loading, cleaning, merging |
-| `networkx` | Graph construction & coloring algorithms |
-| `matplotlib` | Graph visualisation |
-| `neo4j` (Python driver) | Writing the graph to Neo4j |
-| `openpyxl` | Exporting schedules to Excel |
-| `python-dotenv` | Loading Neo4j credentials from `.env` |
+| Tool                    | Purpose                                  |
+| ----------------------- | ---------------------------------------- |
+| `pandas`                | Data loading, cleaning, merging          |
+| `networkx`              | Graph construction & coloring algorithms |
+| `matplotlib`            | Graph visualisation                      |
+| `neo4j` (Python driver) | Writing the graph to Neo4j               |
+| `openpyxl`              | Exporting schedules to Excel             |
+| `python-dotenv`         | Loading Neo4j credentials from `.env`    |
 
 ---
 
