@@ -1,0 +1,7 @@
+pandas
+numpy
+networkx
+matplotlib
+neo4j
+python-dotenv
+openpyxl
